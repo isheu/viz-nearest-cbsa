@@ -1,0 +1,42 @@
+<html>
+   <head>
+      <script type="text/javascript" src="../../libraries/d3.v3.min.js"></script>
+      <script src="http://d3js.org/topojson.v1.min.js"></script>      
+      <script type="text/javascript" src="../../libraries/jquery-1.10.2.js"></script>
+      <script type="text/javascript" src="../../libraries/jquery-ui-1.10.3/ui/jquery-ui.js"></script>      
+      <script type="text/javascript" src="../../libraries/chroma.js-master/chroma.min.js"></script>
+      <script type="text/javascript" src="../../libraries/bootstrap-3.0.0-dist/js/bootstrap.min.js"></script>
+      <script type="text/javascript" src="./ipps_county_dist_helper.js"></script>
+      <script type="text/javascript" src="./ipps_county_dist_data.js"></script>
+      <link rel="stylesheet" type="text/css" href="./ipps_county_dist.css" />
+      <link rel="stylesheet" type="text/css" href="../../libraries/jquery-ui-1.10.3/themes/base/jquery-ui.css" />
+
+      <title>Closest County Boundary to Hospital</title>
+   </head>
+   <body>
+      <div id = "">
+      </div>
+      <script>
+         var width = 960, height = 500;
+         var svg = d3.select("body").append("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+         var container_g = svg.append("g").attr("id", "container_g");
+         
+         var albers_projection = d3.geo.albers()
+            .scale(10000)
+            .translate([width / 2, height / 2]);
+         
+         var geo_line_creator = d3.geo.path()
+            .projection(albers_projection);
+
+         container_g.append("path")
+            .datum(test_data)
+            .attr("d", geo_line_creator)
+            .attr("stroke", "black")
+            .attr("fill","none");
+
+      </script>
+   </body>
+</html>
