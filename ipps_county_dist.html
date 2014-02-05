@@ -14,10 +14,17 @@
       <title>Closest County Boundary to Hospital</title>
    </head>
    <body>
-      <div id = "">
-      </div>
       <script>
-         var width = 960, height = 500;
+         // Remaining Steps:  Select only the relevant counties from shapefiles
+         //                   Geocode hospital addresses, dataset should include (residing county + adjacent county pairs)
+         //                   Tag segments of the border as X-A, X-B, X-C, X-D
+         //                      Google directions-distance API call for P to X-A border-sampled points. Then choose minimum. 
+         //                      Calculated shortest distance for P to X-A border-sampled points
+
+         //                   ** Record burden on API
+         //                   How to display visually
+
+         var width = 1200, height = 900;
          var svg = d3.select("body").append("svg")
             .attr("width", width)
             .attr("height", height);
@@ -25,17 +32,72 @@
          var container_g = svg.append("g").attr("id", "container_g");
          
          var albers_projection = d3.geo.albers()
-            .scale(10000)
-            .translate([width / 2, height / 2]);
+            .scale(30000)
+            .translate([width / 4, height / 2]);
          
          var geo_line_creator = d3.geo.path()
             .projection(albers_projection);
 
-         container_g.append("path")
+         var county_path = container_g.append("path")
             .datum(test_data)
             .attr("d", geo_line_creator)
             .attr("stroke", "black")
             .attr("fill","none");
+
+         var demo_county = county_path.node()
+
+         var path_length = demo_county.getTotalLength()
+         var precision = path_length / demo_county.pathSegList.numberOfItems / 0.5
+         var sampled_pts = [];
+
+         for (var sample, sample_length = 0; sample_length <= path_length; sample_length += precision) {
+            sample = demo_county.getPointAtLength(sample_length);
+            sampled_pts.push([sample.x, sample.y]);
+         }
+
+         container_g.selectAll("circle")
+            .data(sampled_pts).enter().append("circle")
+            .attr("cx", function(d) { return d[0]; })
+            .attr("cy", function(d) { return d[1]; })
+            .attr("r", 1)
+            .attr("stroke", "#cc181e");
+
+         var reverse_project_samples = [];
+         sampled_pts.forEach(function(d) {
+            reverse_project_samples.push(albers_projection.invert(d))
+         });
+
+         var voronoi = d3.geom.voronoi()
+            .clipExtent([[-2, -2], [width + 2, height + 2]]);
+
+         var cell = svg.append("g")
+             .attr("class", "voronoi")
+           .selectAll("g");
+
+         cell = cell.data(voronoi(sampled_pts));
+         cell.exit().remove();
+         var cellEnter = cell.enter().append("g");
+         cellEnter.append("circle").attr("r", 3.5);
+         cellEnter.append("path");
+         cell.select("circle").attr("transform", function(d) { return "translate(" + d + ")"; });
+         cell.select("path").attr("d", function(d) { return "M" + d.join("L") + "Z"; })
+            .attr("stroke-width", 1)
+            .attr("stroke", "#999")
+            .attr("fill","none");
+
+         function toRadian(deg) { return deg * Math.PI / 180; }
+         function getDistance(geopoint1, geopoint2) {
+            var R = 6373.0
+            var lat1 = toRadian(geopoint1[0]), 
+                lat2 = toRadian(geopoint2[0]), 
+                lon1 = toRadian(geopoint1[1]), 
+                lon2 = toRadian(geopoint2[1])
+            var dlat = lat2 - lat1
+            var dlon = lon2 - lon1
+            var a = (Math.sin(dlat/2))**2 + Math.cos(lat1) * Math.cos(lat2) * (Math.sin(dlon/2))**2
+            var c = 2 * atan2(sqrt(a), sqrt(1-a))
+            var distance = R * c
+         }
 
       </script>
    </body>
