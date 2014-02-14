@@ -1,1 +1,54 @@
+div#cbsa_accordion {
+   left: 900px;
+   top: 100px; 
+   position: absolute;
+   width: 300px;
+   height: 800px;
+   font-family: Arial;
+   font-size: 11.5px;
+}
+#cbsa_accordion h3 {
+   letter-spacing: 0px;
+   padding: 2 4 2 25; 
+   color: #666;
+   font-size: 13;
+   font-family: Calibri, Arial, Lucida Sans, Lucida Grande;
+}
+.Alternative_1 {
+   fill: url(#Alternative_fill1);
+}
+.Alternative_2 {
+   fill: url(#Alternative_fill2);
+}
+.Current {
+   fill: url(#Current_fill);
+}
+.county_hovered {
+   fill: rgba(92,128,0,0.25);
+}
+#dist_title_text {
+   text-anchor: start;
+   font-variant: small-caps;
+   fill: #666;
+   font-family: Arial;
+   font-size: 14px;
+}
+#dist_text {
+   text-anchor: start;
+   font-variant: small-caps;
+   fill: #666;
+   font-family: Arial;
+   font-size: 13px;
+}
+line.border {
+   stroke-width: 1px;
+   stroke: #999;
+   shape-rendering: crispEdges;
+}
+.legend_text {
+   fill: #666;
+   font-family: Arial;
+   font-size: 12px;
+}
+
 

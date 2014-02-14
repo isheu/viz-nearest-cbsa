@@ -12,127 +12,501 @@
       <title>Nearest Point Selection along County Border</title>
    </head>
    <body>
+
+      <div id = "cbsa_accordion">
+      <!--
+         <h3>Re-classified Providers, by old CBSA</h3>
+         
+         <div id = "old_cbsas" class = "ccn_list">
+            <div id = "list"><ul></ul></div>
+         </div>
+         -->
+      </div>
+
       <script>
-         var width = 1200, height = 900;
+
+         var width = 1024, height = 768;
          var svg = d3.select("body").append("svg")
             .attr("width", width)
             .attr("height", height);
-         var container_g = svg.append("g").attr("id", "container_g");
-         // Clip path to gradient circle to show which "closest point" it belongs to
+
+         var canvas_g = svg.append("g").attr("id", "canvas_g")
+         var container_g = canvas_g.append("g").attr("id", "container_g");
          // Dropdown selection from a set of examples //
-         // var example_providers = ["140012", "140110", "140155", "140161", "140186"];
+         // var example_providers = ["140012", "140110", "140155", "140161", "140186", "150002", "150004", "150008"];
+         // Include provider county in display
+         // streamline pipeline
+         // Map Marker for shortest straight line, shortest driving distance
+         // Shading by CBSA
+         // Labels of distance
+         // Annotation of shortest distance point
+         // selection of other locations
+         // Adaptive translating of projection. should it be done on the container group?
+                  // Get used to some on-the-fly calculations using d3.
+                  // Names of Inpatient institutions
+                  // Minified version of re-classification regions
+         // Add [shortened] county names
+
+         d3.csv("data/old_cbsa_list.csv", function(old_cbsa) {
+            d3.select("div#cbsa_accordion").selectAll("h3")
+               .data(old_cbsa)
+               .enter().append("h3")
+               .attr("id", function(d, i) { return "h3_" + i; })
+               .html(function(d) { return d.old_cbsa_name; })
+            old_cbsa.forEach(function(d, i) {
+               d3.select("div#cbsa_accordion").insert("div", "h3#h3_" + (i + 1))
+                  .html("hello")
+            })
+            $(function() {
+               $( "#cbsa_accordion" ).accordion({
+                  collapsible: true
+               });
+               // $( "ul, li" ).disableSelection();
+            });               
+         })
+
+
+
+
+         function getCentroid(selection) {
+             var element = selection.node(),
+                 bbox = element.getBBox();
+             return [bbox.x + bbox.width/2, bbox.y + bbox.height/2];
+         }
+         function getX(selection) {
+             var element = selection.node(),
+                 bbox = element.getBBox();
+             return bbox.x;
+         }
+         function getY(selection) {
+             var element = selection.node(),
+                 bbox = element.getBBox();
+             return bbox.y;
+         }
+         function getWidth(selection) {
+            var element = selection.node(), 
+               bbox = element.getBBox();
+            return bbox.width;
+         }
+         function getHeight(selection) {
+            var element = selection.node(), 
+               bbox = element.getBBox();
+            return bbox.height;
+         }
 
          var defs = svg.append("defs");
+         
+         defs.append("pattern")
+            .attr("id", "Alternative_fill1")
+            .attr("patternUnits", "userSpaceOnUse")
+            .attr("width", "15").attr("height", "15")
+            .append("image")
+               .attr("xlink:href", "patterns/bg_stripe_orange.png")
+               .attr("x", 0).attr("y", 0)
+               .attr("width", "15").attr("height", "15");
 
-         var example_providers = ["140161"];
-         example_providers.forEach(function(ccn_iter) {
-            d3.csv("distances/drive_distances_for_" + ccn_iter + ".csv", function(error, dist_data) {
-               console.log(dist_data)
-               dist_data.forEach(function(d) {
-                  if (d.driving_dist == "no results") { 
-                     d.driving_dist = "999999999 mi"; 
-                  }
-                  d.driving_dist = d.driving_dist.slice(0,-3)
-                  d.driving_dist_num = +d.driving_dist
-               })
-               ccn_pos = [+dist_data[0].ccn_lng, +dist_data[0].ccn_lat]
-               // Get used to some on-the-fly calculations using d3.
-               
-               var us_projection = d3.geo.albers()
-                  .scale(20000)
-                  .translate([-1800,1600]);
+         defs.append("pattern")
+            .attr("id", "Alternative_fill2")
+            .attr("patternUnits", "userSpaceOnUse")
+            .attr("width", "10").attr("height", "10")
+            .append("image")
+               .attr("xlink:href", "patterns/bg_stripe_green.png")
+               .attr("x", 0).attr("y", 0)
+               .attr("width", "10").attr("height", "10");
 
-               var circle_x = us_projection(ccn_pos)[0]
-               var circle_y = us_projection(ccn_pos)[1]
+         defs.append("pattern")
+            .attr("id", "Current_fill")
+            .attr("patternUnits", "userSpaceOnUse")
+            .attr("width", "64").attr("height", "64")
+            .append("image")
+               .attr("xlink:href", "patterns/bg_dotted.gif")
+               .attr("x", 0).attr("y", 0)
+               .attr("width", "256").attr("height", "256");
+         var radialGradient_drive = defs.append("radialGradient")
+            .attr("id", "driving_grad")
+            .attr("cx", "50%").attr("cy", "50%")
+            .attr("fx", "50%").attr("fy", "50%")
+         radialGradient_drive.append("stop")
+            .attr("offset", "0%")
+            .attr("style", "stop-color:rgb(192,128,0); stop-opacity:1")
+         radialGradient_drive.append("stop")
+            .attr("offset", "100%")
+            .attr("style", "stop-color:rgb(255,255,255); stop-opacity:0")
 
-               container_g.append("circle")
-                  .attr("cx", function() { return +us_projection(ccn_pos)[0]; })
-                  .attr("cy", function() { return +us_projection(ccn_pos)[1]; })
-                  .attr("fill", "#cc181e")
-                  .attr("r", 4);
+         var radialGradient_straight = defs.append("radialGradient")
+            .attr("id", "straight_grad")
+            .attr("cx", "50%").attr("cy", "50%")
+            .attr("fx", "50%").attr("fy", "50%")
+         radialGradient_straight.append("stop")
+            .attr("offset", "0%")
+            .attr("style", "stop-color:rgb(0,128,30); stop-opacity:1")
+         radialGradient_straight.append("stop")
+            .attr("offset", "100%")
+            .attr("style", "stop-color:rgb(255,255,255); stop-opacity:0")
+         
+         d3.csv("data/full_provider_file_type.csv", function(error, add_info) {
 
-               d3.json("data/topojson/topo_counties_for_" + ccn_iter + ".json", function(error, us_counties) {
-                  var county_list = [];
-                  topojson.feature(us_counties, us_counties.objects["counties_for_" + ccn_iter]).features.forEach(function(d) { county_list.push(d.id) })
+            var example_providers = ["510062"];
+            example_providers.forEach(function(ccn_iter) {
+               d3.csv("distances/drive_distances_for_" + ccn_iter + ".csv", function(error, dist_data) {
+                  var working_ccn_info = add_info.filter(function(d) { return d.ccn == ccn_iter; })
 
-                  var geo_line_creator = d3.geo.path()
-                     .projection(us_projection);
-
-                  var closest_points_by_county = []
-                  county_list.forEach(function(d) {
-                     var chk_counties = topojson.mesh(us_counties, us_counties.objects["counties_for_" + ccn_iter], function(a, b) { return (a.id == d) || (b.id == d); })
-                     container_g.append("path")
-                        .datum(chk_counties)
-                        .attr("id", function() { return "fips_" + d; })
-                        .attr("stroke", "#666")
-                        .attr("fill", "none")
-                        .attr("d", geo_line_creator)
-
-                     defs.append("path")
-                        .attr("id", function() { return "county_" + d; })
-                        .datum(chk_counties)
-                        .attr("d", geo_line_creator);
-
-                     defs.append("clipPath")
-                        .attr("id", function() { return "clip_" + d; })
-                        .append("use")
-                        .attr("xlink:href", function() { return "#county_" + d; });
-
-                     current_county = d;
-                     var county_data = dist_data.filter(function(d) { return d.county == String(current_county); })
-                     var sorted_county_data = county_data.sort(function(a,b) { return a.driving_dist_num < b.driving_dist_num ? -1 : 1; })
-                     var closest_drive_pt = [+sorted_county_data[0].county_border_lng, +sorted_county_data[0].county_border_lat]
-                     var sorted_county_data = county_data.sort(function(a,b) { return +a.distance < +b.distance ? -1 : 1; })
-                     var closest_straight_pt = [+sorted_county_data[0].county_border_lng, +sorted_county_data[0].county_border_lat]
-                     var obj_closest_to_county = {"county": current_county, "closest_drive_pt": closest_drive_pt, "closest_straight_pt": closest_straight_pt}
-                     closest_points_by_county.push(obj_closest_to_county)
+                  dist_data.forEach(function(d) {
+                     if (d.driving_dist == "no results") { 
+                        d.driving_dist = "999999999 mi"; 
+                     }
+                     d.driving_dist = d.driving_dist.slice(0,-3)
+                     d.driving_dist_num = +d.driving_dist
                   })
-                  console.log(closest_points_by_county)
-                  var close_pts_container = container_g.append("g")
+                  ccn_pos = [+dist_data[0].ccn_lng, +dist_data[0].ccn_lat]
+                  
+                  var us_projection = d3.geo.albers()
+                     //.scale(20000); 
+                     .scale(25000); 
 
-                  close_pts_container.selectAll("circle#straight_dist_pts").data(closest_points_by_county)
-                     .enter().append("circle").attr("id", "straight_dist_pts")
-                     .attr("id", function(d) { return "county_pt_" + d.county; })
-                     .attr("cx", function(d) { return +us_projection(d.closest_straight_pt)[0]; })
-                     .attr("cy", function(d) { return +us_projection(d.closest_straight_pt)[1]; })
-                     .attr("r", 8)
-                     .style("opacity", 0.5)
-                     .attr("fill", "green");
-                  close_pts_container
-                     .attr("clip-path", "url(#clip_17093)")
+                  var circle_x = us_projection(ccn_pos)[0]
+                  var circle_y = us_projection(ccn_pos)[1]
 
-                  
-                  
-                  
-                  
-                  
-                  container_g.selectAll("circle#straight_dist_pts").data(closest_points_by_county)
-                     .enter().append("circle").attr("id", "straight_dist_pts")
-                     .attr("id", function(d) { return "county_pt_" + d.county; })
-                     .attr("cx", function(d) { return +us_projection(d.closest_straight_pt)[0]; })
-                     .attr("cy", function(d) { return +us_projection(d.closest_straight_pt)[1]; })
-                     .attr("r", 3)
-                     .style("opacity", 0.5)
-                     .attr("fill", "green");
+                  container_g.append("circle")
+                     .attr("cx", function() { return +us_projection(ccn_pos)[0]; })
+                     .attr("cy", function() { return +us_projection(ccn_pos)[1]; })
+                     .attr("fill", "#cc181e")
+                     .attr("r", 4);
+
+                  d3.json("data/topojson/topo_counties_for_" + ccn_iter + ".json", function(error, us_counties) {
+                     var county_list = [];
+                     topojson.feature(us_counties, us_counties.objects["counties_for_" + ccn_iter]).features.forEach(function(d) { county_list.push({"id":d.id, "cbsa":d.properties.CBSAFP}) })
+                     var geo_line_creator = d3.geo.path()
+                        .projection(us_projection);
+
+                     var closest_points_by_county = []
+                     
+                     county_list.forEach(function(d) {
+                        var working_ccn_county_info = working_ccn_info.filter(function(x) { return x.fips2 == d.id; })
+                        console.log(working_ccn_county_info)
+                        var chk_counties = topojson.mesh(us_counties, us_counties.objects["counties_for_" + ccn_iter], function(a, b) { return (a.id == d.id) || (b.id == d.id); })
+
+                        container_g.append("path")
+                           .datum(chk_counties)
+                           .attr("data-fips_county", function() { return d.id; })
+                           .attr("id", function() { return "fips_" + d.id; })
+                           .attr("class", function() { return "cbsa_" + d.cbsa + " " + working_ccn_county_info[0].type; })      
+                           .attr("stroke", "#666")
+                           .attr("d", geo_line_creator)
+
+                        container_g.selectAll("path").classed("map_paths", 1)
+
+                        defs.append("path")
+                           .attr("id", function() { return "county_" + d.id; })
+                           .datum(chk_counties)
+                           .attr("d", geo_line_creator);
+
+                        defs.append("clipPath")
+                           .attr("id", function() { return "clip_" + d.id; })
+                           .append("use")
+                           .attr("xlink:href", function() { return "#county_" + d.id; });
+
+                        var county_centroid = getCentroid(container_g.selectAll("path#fips_" + d.id))
+                        
+                        container_g.append("text")
+                           .attr("x", county_centroid[0]).attr("y", county_centroid[1])
+                           .attr("fill", "#999")
+                           .attr("text-anchor", "middle")
+                           .style("font-family", "Arial").style("font-size", 10)
+                           .text(d.id)
+                           //.text(working_ccn_county_info[0].fips2_name)
+
+                        current_county = d.id;
+                        var county_data = dist_data.filter(function(d) { return d.county == String(current_county); })
+                        var sorted_county_data = county_data.sort(function(a,b) { return a.driving_dist_num < b.driving_dist_num ? -1 : 1; })
+                        var closest_drive_pt = [+sorted_county_data[0].county_border_lng, +sorted_county_data[0].county_border_lat]
+                        var closest_drive_dist = +sorted_county_data[0].driving_dist_num
+                        var sorted_county_data = county_data.sort(function(a,b) { return +a.distance < +b.distance ? -1 : 1; })
+                        var closest_straight_pt = [+sorted_county_data[0].county_border_lng, +sorted_county_data[0].county_border_lat]
+                        var closest_straight_dist = +sorted_county_data[0].distance
+                        var obj_closest_to_county = {"county": current_county, "prov_pos":ccn_pos, 
+                           "closest_drive_dist":closest_drive_dist, "closest_straight_dist":closest_straight_dist, 
+                           "closest_drive_pt": closest_drive_pt, "closest_straight_pt": closest_straight_pt, 
+                           "straight_path_coordinates": [us_projection(ccn_pos), us_projection(closest_straight_pt)], 
+                           "drive_path_coordinates": [us_projection(ccn_pos), 
+                              [(us_projection(ccn_pos)[0] + us_projection(closest_drive_pt)[0])/2 + 45,(us_projection(ccn_pos)[1] + us_projection(closest_drive_pt)[1])/2 + 45], 
+                              us_projection(closest_drive_pt)], 
+                           "fips2_name":working_ccn_county_info[0].fips2_name, 
+                           "fips2_cbsa":working_ccn_county_info[0].fips2_cbsa, 
+                           "type":working_ccn_county_info[0].type, "ccn_fips":working_ccn_county_info[0].fips1 }
+                        closest_points_by_county.push(obj_closest_to_county)
+                     })
+
+                     winner_drive_dist = closest_points_by_county.sort(function(a,b) { return a.closest_drive_dist < +b.closest_drive_dist ? -1 : 1; })[0]
+                     winner_straight_dist = closest_points_by_county.sort(function(a,b) { return a.closest_straight_dist < +b.closest_straight_dist ? -1 : 1; })[0]
+
+                     container_g.selectAll("path.map_paths")
+                        .on("mouseover", function() {
+                           d3.select(this).classed("county_hovered", 1)
+                           console.log(d3.select(this).attr("data-fips_county"))
+                           draw_county_distances(d3.select(this).attr("data-fips_county"))
+                        })
+                        .on("mouseout", function() {
+                           d3.select(this).classed("county_hovered", 0)
+                           remove_county_distances()
+                        })
+
+                     d3.json("data/topojson/topo_counties_for_" + ccn_iter + ".json", function(error, us_counties) {
+                        container_g.append("path")
+                           .datum(topojson.feature(us_counties,us_counties.objects["counties_for_" + ccn_iter]))
+                           .attr("class", "bbox_calc")
+                           .attr("stroke", "none")
+                           .attr("fill", "none")
+                           .attr("d", geo_line_creator)
+
+                        console.log(container_g.selectAll("path.bbox_calc"))
+                        var map_path_centroid_x = getCentroid(container_g.selectAll("path.bbox_calc"))[0]
+                        var map_path_centroid_y = getCentroid(container_g.selectAll("path.bbox_calc"))[1]
+
+                        var map_path_x = getX(container_g.selectAll("path.bbox_calc"))
+                        var map_path_y = getY(container_g.selectAll("path.bbox_calc"))
+
+                        var map_path_width = getWidth(container_g.selectAll("path.bbox_calc"))
+                        var map_path_height = getHeight(container_g.selectAll("path.bbox_calc"))
+                        console.log(map_path_width)
+                        console.log(map_path_height)
+                        
+                        // map_path_x = -1 * (+map_path_x - (width/2) )
+                        // map_path_y = -1 * (+map_path_y - (height/2) )
+                        trans_x = -1 * (+map_path_x - 200)
+                        trans_y = -1 * (+map_path_y - 100)
+
+                        container_g.attr("transform", function() { return "translate(" + trans_x + ", " + trans_y + ")"; })
+                     })
 
 
-                  container_g.selectAll("circle#drive_dist_pts").data(closest_points_by_county)
-                     .enter().append("circle").attr("id", "drive_dist_pts")
-                     .attr("id", function(d) { return "county_pt_" + d.county; })
-                     .attr("cx", function(d) { return +us_projection(d.closest_drive_pt)[0]; })
-                     .attr("cy", function(d) { return +us_projection(d.closest_drive_pt)[1]; })
-                     .attr("r", 3)
-                     .style("opacity", 0.5)
-                     .attr("fill", "orange");
-                  /*
-                  county_list.forEach(function(d) {
-                     container_g.selectAll("circle#county_pt_" + d)
-                        .append("use")
-                        .attr("xlink:href", function() { return "#clip_" + d; });
+                     var close_pts_container = container_g.append("g")
+                     var pt_allocators = close_pts_container.selectAll("g")
+                        .data(county_list).enter().append("g")
+                        .attr("class", "pt_allocator")
+                        .attr("id", function(d) { return "pt_allocator_" + d.id; })
+
+                     county_list.forEach(function(fips_list) {
+                        d3.select("#pt_allocator_" + fips_list.id).selectAll("circle#straight_pt_shadow")
+                           .data(closest_points_by_county.filter(function(d) { return d.county == fips_list.id ;}))
+                           .enter().append("circle")
+                           .attr("id", "straight_pt_shadow")
+                           .attr("cx", function(d) { return +us_projection(d.closest_straight_pt)[0]; })
+                           .attr("cy", function(d) { return +us_projection(d.closest_straight_pt)[1]; })
+                           .attr("r", 18)
+                           .attr("fill", "url(#straight_grad)");
+                        d3.select("#pt_allocator_" + fips_list.id)
+                           .attr("clip-path", function(d) { return "url(#clip_" + fips_list.id + ")"; })
+                     })
+                        
+                     county_list.forEach(function(fips_list) {
+                        d3.select("#pt_allocator_" + fips_list.id).selectAll("circle#drive_pt_shadow")
+                           .data(closest_points_by_county.filter(function(d) { return d.county == fips_list.id ;}))
+                           .enter().append("circle")
+                           .attr("id", "drive_pt_shadow")
+                           .attr("cx", function(d) { return +us_projection(d.closest_drive_pt)[0]; })
+                           .attr("cy", function(d) { return +us_projection(d.closest_drive_pt)[1]; })
+                           .attr("r", 18)
+                           .attr("fill", "url(#driving_grad)");
+                        d3.select("#pt_allocator_" + fips_list.id)
+                           .attr("clip-path", function(d) { return "url(#clip_" + fips_list.id + ")"; })
+                     })
+                        
+                     container_g.selectAll("circle#straight_dist_pts").data(closest_points_by_county)
+                        .enter().append("circle").attr("id", "straight_dist_pts")
+                        .attr("id", function(d) { return "county_pt_" + d.county; })
+                        .attr("cx", function(d) { return +us_projection(d.closest_straight_pt)[0]; })
+                        .attr("cy", function(d) { return +us_projection(d.closest_straight_pt)[1]; })
+                        .attr("r", 3)
+                        .style("opacity", 0.5)
+                        .attr("fill", "green");
+
+                     container_g.selectAll("circle#drive_dist_pts").data(closest_points_by_county)
+                        .enter().append("circle").attr("id", "drive_dist_pts")
+                        .attr("id", function(d) { return "county_pt_" + d.county; })
+                        .attr("cx", function(d) { return +us_projection(d.closest_drive_pt)[0]; })
+                        .attr("cy", function(d) { return +us_projection(d.closest_drive_pt)[1]; })
+                        .attr("r", 3)
+                        .style("opacity", 0.5)
+                        .attr("fill", "orange");
+
+                     var orange_marker_width = 28;
+                     var orange_marker_height = 47;
+                     var green_marker_width = 28; 
+                     var green_marker_height = 44;
+                     
+                     container_g.append("svg:image")
+                        .attr("xlink:href", "data/map_pin_yellow.svg")
+                        .style("opacity", 1)
+                        .attr("width", green_marker_width).attr("height", green_marker_height)
+                        .attr("x", function() { return +us_projection(winner_straight_dist.closest_straight_pt)[0] - green_marker_width; })
+                        .attr("y", function() { return +us_projection(winner_straight_dist.closest_straight_pt)[1] - green_marker_height; })
+                        
+                     container_g.append("svg:image")
+                        .attr("xlink:href", "data/map_pin_red.svg")
+                        .style("opacity", 1)
+                        .attr("width", orange_marker_width).attr("height", orange_marker_height)
+                        .attr("x", function() { return +us_projection(winner_drive_dist.closest_drive_pt)[0] - orange_marker_width / 2; })
+                        .attr("y", function() { return +us_projection(winner_drive_dist.closest_drive_pt)[1] - orange_marker_height; })
+                     
+
+                     var curve_path = d3.svg.line()
+                        .interpolate("basis");
+                     var straight_path = d3.svg.line();
+                     
+                     draw_legend(ccn_iter)
+                     function draw_legend(ccn) {
+                        d3.csv("data/ccn_cbsa_list.csv", function(ccn_cbsa) {
+                           var legend_ccn = ccn_cbsa.filter(function(d) { return d.ccn == ccn; })[0]                           
+                           var legend = canvas_g.append("g").attr("id", "legend")
+                              .attr("transform", "translate(625, 625)")
+
+                           if (legend_ccn.curr_cbsa) {
+                              legend.append("rect")
+                                 .attr("x", 0).attr("y", 0)
+                                 .attr("width", 32).attr("height", 23)
+                                 .style("shape-rendering", "crispEdges")
+                                 .attr("fill", "url(#Current_fill)")
+                                 .attr("stroke", "#999")
+                              legend.append("text")
+                                 .attr("x", 40).attr("y", 16)
+                                 .attr("class", "legend_text")
+                                 .text(function() { return "Current CBSA - " + legend_ccn.curr_cbsa; })
+                           }
+                           else {
+                              legend.append("text") 
+                                 .attr("x", 0).attr("y", 12)
+                                 .attr("class", "legend_text")
+                                 .text(function() { return "Current CBSA not an option for CCN"; })
+                           }
+
+                           legend.append("rect")
+                              .attr("x", 0).attr("y", 30)
+                              .style("shape-rendering", "crispEdges")
+                              .attr("width", 32).attr("height", 23)
+                              .attr("fill", "url(#Alternative_fill1)")
+                              .attr("stroke", "#999")
+                           
+                           legend.append("text")
+                              .attr("x", 40).attr("y", 45)
+                              .attr("class", "legend_text")
+                              .text(function() { return "Alternative CBSA #1 - " + legend_ccn.alt_cbsa1; })
+
+                           if (legend_ccn.alt_cbsa2) {
+                              legend.append("rect")
+                                 .attr("x", 0).attr("y", 60)
+                                 .attr("width", 32).attr("height", 23)
+                                 .style("shape-rendering", "crispEdges")
+                                 .attr("fill", "url(#Alternative_fill2)")
+                                 .attr("stroke", "#999")
+                              
+                              legend.append("text")
+                                 .attr("x", 40).attr("y", 77)
+                                 .attr("class", "legend_text")
+                                 .text(function() { return "Alternative CBSA #2 - " + legend_ccn.alt_cbsa2; })
+                           }
+
+                           legend.append("circle")
+                              .attr("cx", 13).attr("cy", 105)
+                              .attr("r", 4).attr("fill", "orange")
+                           legend.append("text")
+                              .attr("x", 30).attr("y", 110)
+                              .attr("class", "legend_text")
+                              .text("Closest Point for County - Driving")
+                           legend.append("circle")
+                              .attr("cx", 13).attr("cy", 130)
+                              .attr("r", 4).attr("fill", "green")
+                           legend.append("text")
+                              .attr("x", 30).attr("y", 135)
+                              .attr("class", "legend_text")
+                              .text("Closest Point for County - Straight")
+                        })
+                     }
+
+                     var hover_tip_paths = container_g.append("g").attr("id", "drawn_path_tip")
+                     function draw_county_distances(county_id) {
+                        var hovered_county_drive = closest_points_by_county.filter(function(d) { return d.county == county_id; })
+                        var hovered_county_straight = closest_points_by_county.filter(function(d) { return d.county == county_id; })
+                        
+                        // WHY DIDN'T IT WORK WITH DATA + ENTER + APPEND????? //
+                        canvas_g.append("line")
+                           .attr("x1", 80).attr("x2", 220)
+                           .attr("y1", 160).attr("y2", 160)
+                           .attr("class", "hovered_tip border");
+                        canvas_g.append("line")
+                           .attr("x1", 80).attr("x2", 220)
+                           .attr("y1", 300).attr("y2", 300)
+                           .attr("class", "hovered_tip border");
+
+                        canvas_g.append("text")
+                           .datum(hovered_county_straight[0])
+                           .attr("id", "dist_text")
+                           .attr("class", "hovered_tip tip_title_text")
+                           .attr("x", 85).attr("y", 180)
+                           .text(function(d) { return "distance to: ";})
+
+                        canvas_g.append("text")
+                           .datum(hovered_county_straight[0])
+                           .attr("id", "dist_text")
+                           .attr("class", "hovered_tip tip_title_text")
+                           .attr("x", 85).attr("y", 200)
+                           .text(function(d) { return d.fips2_name.toUpperCase(); })
+
+                        hover_tip_paths.append("path")
+                           .datum(hovered_county_straight[0].straight_path_coordinates)
+                           .attr("id", "straight_dist_path")
+                           .attr("class", "hovered_tip")
+                           .attr("d", straight_path)
+                           .attr("fill", "none")
+                           .attr("stroke", "rgba(128,128,128,0.5)")
+                           .attr("stroke-dasharray", "0%,100%")
+                           .transition()
+                           .delay(0).duration(1000)
+                           .attr("stroke-dasharray", "100%, 0%");
+
+                        var dist_format = d3.format(".2f")
+                        canvas_g.append("text")
+                           .attr("id", "dist_text")
+                           .attr("class", "hovered_tip straight_text")
+                           .attr("x", 150).attr("y", 225)
+                           .text("straight")
+
+                        canvas_g.append("text")
+                           .datum(hovered_county_straight[0])
+                           .attr("id", "dist_text")
+                           .attr("class", "hovered_tip straight_text")
+                           .attr("x", 150).attr("y", 240)
+                           .text(function(d) { return dist_format(d.closest_straight_dist) + " mi"; })
+                        
+                        hover_tip_paths.append("path")
+                           .datum(hovered_county_drive[0].drive_path_coordinates)
+                           .attr("id", "drive_dist_path")
+                           .attr("class", "hovered_tip")
+                           .attr("d", curve_path)
+                           .attr("fill", "none")
+                           .attr("stroke", "#999")
+                           .attr("stroke-dasharray", "0%,100%")
+                           .transition()
+                           .delay(0).duration(1000)
+                           .attr("stroke-dasharray", "100%, 0%");
+
+                        canvas_g.append("text")
+                           .attr("id", "dist_text")
+                           .attr("class", "hovered_tip drive_text")
+                           .attr("x", 85).attr("y", 225)
+                           .text("drive")
+
+                        canvas_g.append("text")
+                           .datum(hovered_county_straight[0])
+                           .attr("id", "dist_text")
+                           .attr("class", "hovered_tip drive_text")
+                           .attr("x", 85).attr("y", 240)
+                           .text(function(d) { return dist_format(d.closest_drive_dist) + " mi"; })
+                        }
+                     function remove_county_distances() { d3.selectAll(".hovered_tip").remove(); }
                   })
-                  */
-               })
-            }) 
+               }) 
+            })
          })
 
          /*
@@ -154,6 +528,31 @@
             .attr("stroke", "#999")
             .attr("fill","none");
          */
+                     /*
+                     container_g.selectAll("path#straight_dist_path")
+                        .data(straight_array)
+                        .enter().append("path")
+                        .attr("id", "straight_dist_path")
+                        .attr("d", straight_path)
+                        .attr("fill", "none")
+                        .attr("stroke", "rgba(128,128,128,0.25)")
+                        .attr("stroke-dasharray", "0%,100%")
+                        .transition()
+                        .delay(100).duration(1000)
+                        .attr("stroke-dasharray", "100%, 0%");
+
+                     container_g.selectAll("path#drive_dist_path")
+                        .data(drive_array)
+                        .enter().append("path")
+                        .attr("id", "drive_dist_path")
+                        .attr("d", curve_path)
+                        .attr("fill", "none")
+                        .attr("stroke", "#666")
+                        .attr("stroke-dasharray", "0%,100%")
+                        .transition()
+                        .delay(100).duration(1000)
+                        .attr("stroke-dasharray", "100%, 0%");
+                        */         
       </script>
    </body>
 </html>
