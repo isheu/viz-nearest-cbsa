@@ -12,20 +12,11 @@
       <title>Nearest Point Selection along County Border</title>
    </head>
    <body>
-
       <div id = "cbsa_accordion">
-      <!--
-         <h3>Re-classified Providers, by old CBSA</h3>
-         
-         <div id = "old_cbsas" class = "ccn_list">
-            <div id = "list"><ul></ul></div>
-         </div>
-         -->
       </div>
-
       <script>
 
-         var width = 1024, height = 768;
+         var width = 1024, height = 850;
          var svg = d3.select("body").append("svg")
             .attr("width", width)
             .attr("height", height);
@@ -46,22 +37,55 @@
                   // Names of Inpatient institutions
                   // Minified version of re-classification regions
          // Add [shortened] county names
-
-         d3.csv("data/old_cbsa_list.csv", function(old_cbsa) {
-            d3.select("div#cbsa_accordion").selectAll("h3")
-               .data(old_cbsa)
+         var selected_ccn; 
+         var ccn_format = d3.format("06")
+         d3.csv("data/old_cbsa_provider_file.csv", function(old_cbsa) {
+            old_cbsa.forEach(function(d) { 
+               d.ccn = String(ccn_format(+d.ccn))
+            })
+            var nested_data = d3.nest()
+               .key(function(d) { return d.old_cbsa_name; })
+               .entries(old_cbsa);
+            var h3s = d3.select("div#cbsa_accordion").selectAll("h3")
+               .data(nested_data)
                .enter().append("h3")
                .attr("id", function(d, i) { return "h3_" + i; })
-               .html(function(d) { return d.old_cbsa_name; })
-            old_cbsa.forEach(function(d, i) {
-               d3.select("div#cbsa_accordion").insert("div", "h3#h3_" + (i + 1))
-                  .html("hello")
+               .html(function(d) { return d.key; })
+            
+            nested_data.forEach(function(old_cbsa_ccns, i) {
+               var j = i + 1
+               var select_id = "h3#h3_" + j;
+               d3.select("div#cbsa_accordion")
+                  .insert("ul", select_id)
+                  .datum(old_cbsa_ccns)
+                  .attr("class", function() { return "ccn_nav"; });
             })
+            d3.selectAll("ul.ccn_nav").selectAll("li.ccn_nav_elements").each()
+               .data(function(d) { 
+                  return d.values; 
+               }).enter().append("li")
+                  .attr("class", "ccn_nav_elements")
+                  .attr("id", function(d) { return "menu_li_" + d.ccn; })
+                  .html(function(d) { return d.facility_name; })
+
+            d3.selectAll("li")
+               .on("click", function() {
+                  d3.selectAll("li").classed("clicked", 0)                  
+                  d3.select(this).classed("clicked", 1)
+                  selected_ccn = d3.select(this).data()[0].ccn;
+                  remove_map_and_legend()
+                  draw_map_and_legend(selected_ccn)
+                  })
+
+            d3.select("li#menu_li_140012").classed("clicked", 1);
             $(function() {
+               $( "#cbsa_accordion" ).accordion({
+                  heightStyle: "content"                  
+               });
                $( "#cbsa_accordion" ).accordion({
                   collapsible: true
                });
-               // $( "ul, li" ).disableSelection();
+               $( "ul, li" ).disableSelection();
             });               
          })
 
@@ -143,11 +167,19 @@
          radialGradient_straight.append("stop")
             .attr("offset", "100%")
             .attr("style", "stop-color:rgb(255,255,255); stop-opacity:0")
-         
-         d3.csv("data/full_provider_file_type.csv", function(error, add_info) {
 
-            var example_providers = ["510062"];
-            example_providers.forEach(function(ccn_iter) {
+         draw_map_and_legend("140012")
+         function remove_map_and_legend() {
+            container_g.remove()
+            canvas_g.select("g#legend").remove()
+            canvas_g.select("g#win_annotation").remove()
+            container_g = canvas_g.append("g").attr("id", "container_g");
+         }
+
+         function draw_map_and_legend(ccn_iter) {
+            d3.csv("data/full_provider_file_type.csv", function(error, add_info) {
+            //var example_providers = ["510062"];
+            //example_providers.forEach(function(ccn_iter) {
                d3.csv("distances/drive_distances_for_" + ccn_iter + ".csv", function(error, dist_data) {
                   var working_ccn_info = add_info.filter(function(d) { return d.ccn == ccn_iter; })
 
@@ -161,7 +193,6 @@
                   ccn_pos = [+dist_data[0].ccn_lng, +dist_data[0].ccn_lat]
                   
                   var us_projection = d3.geo.albers()
-                     //.scale(20000); 
                      .scale(25000); 
 
                   var circle_x = us_projection(ccn_pos)[0]
@@ -171,7 +202,9 @@
                      .attr("cx", function() { return +us_projection(ccn_pos)[0]; })
                      .attr("cy", function() { return +us_projection(ccn_pos)[1]; })
                      .attr("fill", "#cc181e")
-                     .attr("r", 4);
+                     .attr("r", 0)
+                     .transition().duration(500).delay(500).ease("elastic", 1.5, 0.5)
+                     .attr("r", 6);
 
                   d3.json("data/topojson/topo_counties_for_" + ccn_iter + ".json", function(error, us_counties) {
                      var county_list = [];
@@ -213,8 +246,8 @@
                            .attr("fill", "#999")
                            .attr("text-anchor", "middle")
                            .style("font-family", "Arial").style("font-size", 10)
-                           .text(d.id)
-                           //.text(working_ccn_county_info[0].fips2_name)
+                           //.text(d.id)
+                           .text(working_ccn_county_info[0].fips2_name.toUpperCase())
 
                         current_county = d.id;
                         var county_data = dist_data.filter(function(d) { return d.county == String(current_county); })
@@ -259,7 +292,6 @@
                            .attr("fill", "none")
                            .attr("d", geo_line_creator)
 
-                        console.log(container_g.selectAll("path.bbox_calc"))
                         var map_path_centroid_x = getCentroid(container_g.selectAll("path.bbox_calc"))[0]
                         var map_path_centroid_y = getCentroid(container_g.selectAll("path.bbox_calc"))[1]
 
@@ -268,11 +300,7 @@
 
                         var map_path_width = getWidth(container_g.selectAll("path.bbox_calc"))
                         var map_path_height = getHeight(container_g.selectAll("path.bbox_calc"))
-                        console.log(map_path_width)
-                        console.log(map_path_height)
                         
-                        // map_path_x = -1 * (+map_path_x - (width/2) )
-                        // map_path_y = -1 * (+map_path_y - (height/2) )
                         trans_x = -1 * (+map_path_x - 200)
                         trans_y = -1 * (+map_path_y - 100)
 
@@ -354,6 +382,51 @@
                         .interpolate("basis");
                      var straight_path = d3.svg.line();
                      
+                     console.log(winner_drive_dist)
+                     draw_winning_annotation(winner_drive_dist, winner_straight_dist) 
+
+                     
+                     
+                     function draw_winning_annotation(winner_drive_data, winner_straight_data) {
+                        var annotation_g = canvas_g.append("g").attr("id", "win_annotation")
+                        annotation_g.append("svg:image")
+                           .attr("xlink:href", "data/map_pin_yellow.svg")
+                           .style("opacity", 0.5)
+                           .attr("width", green_marker_width).attr("height", green_marker_height)
+                           .attr("x",500) 
+                           .attr("y", 785)
+                        annotation_g.append("svg:image")
+                           .attr("xlink:href", "data/map_pin_red.svg")
+                           .style("opacity", 0.5)
+                           .attr("width", orange_marker_width).attr("height", orange_marker_height)
+                           .attr("x", 500) 
+                           .attr("y", 800) 
+                        annotation_g.append("text")
+                           .datum(winner_straight_data)
+                           .text(function(d) { return "Closest CBSA by straight line distance: " })
+                           .attr("class", "legend_text")
+                           .attr("x", 550)
+                           .attr("y", 805)
+                        annotation_g.append("text")
+                           .datum(winner_straight_data)
+                           .text(function(d) { return d.fips2_cbsa + " via " + d.fips2_name + " County"; })
+                           .attr("class", "legend_text")
+                           .attr("x", 775)
+                           .attr("y", 805)
+                        annotation_g.append("text")
+                           .datum(winner_drive_data)
+                           .text(function(d) { return "by driving distance: "})
+                           .attr("class", "legend_text")
+                           .attr("x", 631)
+                           .attr("y", 825)
+                        annotation_g.append("text")
+                           .datum(winner_drive_data)
+                           .text(function(d) { return d.fips2_cbsa + " via " + d.fips2_name + " County"; })
+                           .attr("class", "legend_text")
+                           .attr("x", 775)
+                           .attr("y", 825)
+                     }
+
                      draw_legend(ccn_iter)
                      function draw_legend(ccn) {
                         d3.csv("data/ccn_cbsa_list.csv", function(ccn_cbsa) {
@@ -507,7 +580,7 @@
                   })
                }) 
             })
-         })
+         }
 
          /*
          var voronoi = d3.geom.voronoi()

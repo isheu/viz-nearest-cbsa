@@ -34,9 +34,11 @@
             .attr("width", width)
             .attr("height", height);
          var container_g = svg.append("g").attr("id", "container_g");
-
+         var ccn_format = d3.format("06")
          d3.csv("data/gmaps_api_output_ipps.csv", function(error, prov_latlng) {
-            console.log(prov_latlng)
+            prov_latlng.forEach(function(d) {
+               d.ccn = String(ccn_format(+d.ccn))
+            })
             
             prov_latlng.forEach(function(d) {
                var by_county_sampled_pts = []
@@ -47,7 +49,6 @@
                d3.json("data/topojson/topo_counties_for_" + current_ccn + ".json", function(error, us_counties) {
                   var county_list = [];
                   topojson.feature(us_counties, us_counties.objects["counties_for_" + current_ccn]).features.forEach(function(d) { county_list.push(d.id) })
-                  console.log(county_list)
                   
                   // var us_projection = d3.geo.albersUsa()
                   //   .scale(30000)
