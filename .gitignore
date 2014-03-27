@@ -1,1 +1,6 @@
 data/geojson/**
+data/archive/**
+index.html
+javascripts/
+stylesheets/
+params.json

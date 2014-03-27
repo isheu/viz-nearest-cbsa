@@ -2,18 +2,11 @@
    <head>
       <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
       <script src="http://d3js.org/topojson.v1.min.js"></script>
-      <!-- <script src="http://code.jquery.com/jquery-1.10.2.min.js"></script> -->
       <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
       <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
-      <!-- <script type="text/javascript" src="../../libraries/d3/d3.v3.min.js"></script>
-      <script type="text/javascript" src="../../libraries/d3/topojson.v1.min.js"></script>
-      <script type="text/javascript" src="../../libraries/jquery/jquery-1.10.2.js"></script>
-      <script type="text/javascript" src="../../libraries/jquery-ui-1.10.3/ui/jquery-ui.js"></script>      -->
-      <!-- <script type="text/javascript" src="../../libraries/chroma.js-master/chroma.min.js"></script> -->
       <script type="text/javascript" src="./ipps_display_helper.js"></script>
       <link rel="stylesheet" type="text/css" href="./ipps_display.css" />
       <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/themes/smoothness/jquery-ui.css" />
-      <!-- <link rel="stylesheet" type="text/css" href="../../libraries/jquery-ui-1.10.3/themes/base/jquery-ui.css" /> -->
 
       <title>Nearest Point Selection along County Border</title>
    </head>
@@ -45,7 +38,8 @@
          // Add [shortened] county names
          var selected_ccn; 
          var ccn_format = d3.format("06")
-         d3.csv("data/old_cbsa_provider_file.csv", function(old_cbsa) {
+         // d3.csv("data/old_cbsa_provider_file.csv", function(old_cbsa) {
+         d3.csv("data/anonymized_ccn_cbsa_list.csv", function(old_cbsa) {
             old_cbsa.forEach(function(d) { 
                d.ccn = String(ccn_format(+d.ccn))
             })
@@ -131,7 +125,7 @@
             .attr("patternUnits", "userSpaceOnUse")
             .attr("width", "15").attr("height", "15")
             .append("image")
-               .attr("xlink:href", "patterns/bg_stripe_orange.png")
+               .attr("xlink:href", "data/patterns/bg_stripe_orange.png")
                .attr("x", 0).attr("y", 0)
                .attr("width", "15").attr("height", "15");
 
@@ -140,7 +134,7 @@
             .attr("patternUnits", "userSpaceOnUse")
             .attr("width", "10").attr("height", "10")
             .append("image")
-               .attr("xlink:href", "patterns/bg_stripe_green.png")
+               .attr("xlink:href", "data/patterns/bg_stripe_green.png")
                .attr("x", 0).attr("y", 0)
                .attr("width", "10").attr("height", "10");
 
@@ -149,7 +143,7 @@
             .attr("patternUnits", "userSpaceOnUse")
             .attr("width", "64").attr("height", "64")
             .append("image")
-               .attr("xlink:href", "patterns/bg_dotted.gif")
+               .attr("xlink:href", "data/patterns/bg_dotted.gif")
                .attr("x", 0).attr("y", 0)
                .attr("width", "256").attr("height", "256");
          var radialGradient_drive = defs.append("radialGradient")
@@ -183,10 +177,11 @@
          }
 
          function draw_map_and_legend(ccn_iter) {
-            d3.csv("data/full_provider_file_type.csv", function(error, add_info) {
+            // d3.csv("data/full_provider_file_type.csv", function(error, add_info) {
+            d3.csv("data/full_anonymized_provider_data.csv", function(error, add_info) {
             //var example_providers = ["510062"];
             //example_providers.forEach(function(ccn_iter) {
-               d3.csv("distances/drive_distances_for_" + ccn_iter + ".csv", function(error, dist_data) {
+               d3.csv("data/distances/drive_distances_for_" + ccn_iter + ".csv", function(error, dist_data) {
                   var working_ccn_info = add_info.filter(function(d) { return d.ccn == ccn_iter; })
 
                   dist_data.forEach(function(d) {
