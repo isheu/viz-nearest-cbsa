@@ -1,0 +1,65 @@
+<!DOCTYPE HTML>
+<html lang="en">
+   <head>
+      <meta charset="utf-8">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <title>Nearest Point Selection along County Border</title>
+      <link rel="stylesheet" type="text/css" href="./gh-pages-main.css" />
+      <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+      <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>      
+      <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/themes/smoothness/jquery-ui.css" />
+   </head>
+   <body>
+      <div class = "wrapper">
+         <header>
+            <div class = "header_content">
+               <h1>Nearest Point to County Border</h1>
+               <br class="view"><a href="http://isheu.github.io">Home &#187;</a>
+               <br class="view"><a href="https://github.com/isheu">GitHub Repo &#187;</a>
+               <p class = "view"></p>
+               <h4>Background</h4>
+               <p>For this project, I built a tool to visually compare the distances (straight and driving) of hospitals to the borders of neighbouring counties. There had been a change in health policy that affected whether some hospitals would be classified as primarily serving a rural population. 
+               Some unforeseen exceptions to the policy came up, and to examine these scenarios, our client requested a report on the counties closest to a set of hospitals. This tool was built to let them easily explore the results. 
+               </p>
+               <h4 class = "view">Thoughts about Project </h4>
+               <p> This visualization tool wasn't necessary to complete the task, but was a nice way to let the client understand the methodology, and be able to explore any unexpected results. It was useful in highlighting the effect of selecting between straight or driving distances. </p>
+               <p> I was pleased in doing this work to learn about: 
+               <ul class = "view">
+                  <li class = "links view">TopoJSON Manipulation</li>
+                  <li class = "links view">Sampling points along SVG paths</li>
+                  <li class = "links view">Geographic projection systems</li>
+                  <li class = "links view">Clip-path</li>
+               </ul>
+            </div>
+            <div class = "close_content">
+               <span class = "close_right">&#171;</span>            
+            </div>
+         </header>
+         <section>
+            <div id = "draw_area"></div>
+         </section>
+      </div>
+      <script src="./require.js" data-main="./main.js"></script>
+      <script language = "javascript">
+         require(['scale.fix.js'], function() { });
+      </script>
+      <script language = "javascript">
+         d3.select(".close_right")
+            .on("click", toggle_description)
+         function toggle_description() {
+            if (!d3.select(".header_content").classed("hidden")) {
+               d3.select("header").transition()
+                  .style("width", "10px")
+               d3.select(".header_content").classed("hidden", 1)
+               d3.select(".close_right").html("&#187;")
+            }
+            else {
+               d3.select("header").transition()
+                  .style("width", "350px")
+               setTimeout(function() { d3.select(".header_content").classed("hidden", 0) }, 250)
+               d3.select(".close_right").html("&#171;")
+            }
+         }
+      </script>
+   </body>
+   </html
